@@ -15,12 +15,15 @@ final class AggregateController {
     private(set) var aggregateUID = ""
     private(set) var subDeviceUIDs: [String] = []
     private var savedDefaultUID: String?
+    private var savedDefaultVolume: Double?
+    private var savedDefaultChannels: [UInt32] = []
+    private let volumeController = VolumeController()
 
     /// 返回错误信息；nil 表示成功。
     func start(subDevices: [AudioDevice]) -> String? {
         guard !subDevices.isEmpty else { return "没有选择任何输出设备" }
         if isRunning { return rebuild(subDevices: subDevices) }
-        savedDefaultUID = AudioDeviceManager.shared.defaultOutputDevice()?.uid
+        snapshotDefaultOutput()
         return activate(subDevices: subDevices)
     }
 
@@ -31,20 +34,22 @@ final class AggregateController {
         return activate(subDevices: subDevices)
     }
 
-    /// 关闭同播并恢复开启前的默认输出。
+    /// 关闭同播：把系统切回同播前的默认输出，并恢复该设备当时的音量。
+    /// （同播期间面板滑块会直接改写子设备的硬件音量，其中可能包含原来的默认设备。）
     func stop() {
         guard isRunning else { return }
-        if isDefaultOurs(), let uid = savedDefaultUID,
-           let id = AudioDeviceManager.shared.deviceID(forUID: uid) {
-            _ = AudioDeviceManager.shared.setDefaultOutput(id)
+        if isDefaultOurs() {
+            restoreDefaultOutput()
         }
         deactivate()
+        clearSnapshot()
     }
 
     /// 不恢复默认输出，只销毁聚合设备（用于用户已在系统里手动切换输出的场景）。
     func stopWithoutRestore() {
         guard isRunning else { return }
         deactivate()
+        clearSnapshot()
     }
 
     func isDefaultOurs() -> Bool {
@@ -53,6 +58,42 @@ final class AggregateController {
     }
 
     // MARK: - Private
+
+    /// 记住开启同播前的默认输出设备及其音量，供关闭时恢复。
+    private func snapshotDefaultOutput() {
+        let manager = AudioDeviceManager.shared
+        if let def = manager.defaultOutputDevice() {
+            savedDefaultUID = def.uid
+            savedDefaultChannels = volumeController.settableChannels(for: def.id)
+            savedDefaultVolume = savedDefaultChannels.isEmpty
+                ? nil
+                : volumeController.volume(for: def.id, channels: savedDefaultChannels)
+        } else {
+            clearSnapshot()
+        }
+    }
+
+    private func restoreDefaultOutput() {
+        let manager = AudioDeviceManager.shared
+        if let uid = savedDefaultUID, let id = manager.deviceID(forUID: uid) {
+            if manager.setDefaultOutput(id) {
+                if let volume = savedDefaultVolume, !savedDefaultChannels.isEmpty {
+                    _ = volumeController.setVolume(volume, deviceID: id, channels: savedDefaultChannels)
+                }
+                return
+            }
+        }
+        // 原默认设备已不在（耳机拔出等）→ 选一台可用的物理输出兜底，保证关闭后一定有声音
+        if let fallback = manager.bestPhysicalOutput() {
+            _ = manager.setDefaultOutput(fallback)
+        }
+    }
+
+    private func clearSnapshot() {
+        savedDefaultUID = nil
+        savedDefaultVolume = nil
+        savedDefaultChannels = []
+    }
 
     private func activate(subDevices: [AudioDevice]) -> String? {
         let subUIDs = subDevices.map { $0.uid }

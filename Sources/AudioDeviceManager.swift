@@ -107,6 +107,14 @@ final class AudioDeviceManager {
         return deviceID
     }
 
+    /// 兜底：原默认设备不可用时挑一台可用的输出设备（优先内置扬声器，其次物理设备，最后虚拟）。
+    func bestPhysicalOutput() -> AudioDeviceID? {
+        let devices = allOutputDevices()
+        let physical = devices.filter { $0.transportType != kAudioDeviceTransportTypeVirtual }
+        let builtin = physical.first { $0.transportType == kAudioDeviceTransportTypeBuiltIn }
+        return (builtin ?? physical.first ?? devices.first)?.id
+    }
+
     /// 清理上次异常退出遗留的聚合设备；若遗留聚合设备正占据默认输出，先切到可用的物理输出再销毁。
     func cleanupStaleAggregates() {
         let ids = CA.audioDeviceIDs(objectID: CA.systemObject, selector: kAudioHardwarePropertyDevices)

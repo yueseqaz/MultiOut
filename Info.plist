@@ -2,22 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>MultiOut</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
 	<key>CFBundleDisplayName</key>
 	<string>MultiOut 多设备同播</string>
+	<key>CFBundleExecutable</key>
+	<string>MultiOut</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.sakura.multiout</string>
-	<key>CFBundleExecutable</key>
+	<key>CFBundleName</key>
 	<string>MultiOut</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>1.0.1</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>zh_CN</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
