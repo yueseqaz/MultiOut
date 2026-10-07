@@ -1,0 +1,46 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (Universal: arm64 + x86_64)
+        run: ./build.sh
+        env:
+          ARCHES: 'arm64 x86_64'
+
+      - name: Verify binary architectures
+        run: |
+          lipo -info build/MultiOut.app/Contents/MacOS/MultiOut
+          build/MultiOut.app/Contents/MacOS/MultiOut --selftest
+
+      - name: Package zip
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent build/MultiOut.app dist/MultiOut.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MultiOut.app
+          path: dist/MultiOut.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/MultiOut.zip \
+            --title "MultiOut ${GITHUB_REF_NAME}" \
+            --generate-notes
