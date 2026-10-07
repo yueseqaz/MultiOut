@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build (Universal: arm64 + x86_64)
+      - name: "Build universal binary (arm64 + x86_64)"
         run: ./build.sh
         env:
           ARCHES: 'arm64 x86_64'
